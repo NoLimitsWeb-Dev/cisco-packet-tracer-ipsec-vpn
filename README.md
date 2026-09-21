@@ -200,8 +200,8 @@ Router# reload
 <img width="1132" height="983" alt="image" src="https://github.com/user-attachments/assets/292d3138-6973-4202-8f46-17a5c206e8f8" />
 
 ---
-
-### 🏢 Clean HQ Router VPN Configuration
+## VPN's Configuration
+### 🏢 Phase 1: Clean HQ Router VPN Configuration
 Once the HQ Router reboots, open its CLI and paste this streamlined script to configure your VPN tunnel over your internet port (GigabitEthernet0/1):
 ```
 HQ_Router> enable
@@ -239,3 +239,96 @@ HQ_Router(config)# end
 
 HQ_Router# write memory
 ```
+<img width="1136" height="1005" alt="image" src="https://github.com/user-attachments/assets/2c4ceb3a-9635-4062-aa07-e6c996083ed4" />
+
+---
+### 🕸️ Phase 3: Clean Remote Router VPN Configuration
+Open Remote Router CLI after its reboot and paste this mirrored configuration block:
+```
+Remote_Router> enable
+Remote_Router# configure terminal
+
+! --- 1. Set up the Phase 1 Handshake (Packet Tracer compatible) ---
+Remote_Router(config)# crypto isakmp policy 10
+Remote_Router(config-isakmp)# encryption aes 256
+Remote_Router(config-isakmp)# hash sha
+Remote_Router(config-isakmp)# authentication pre-share
+Remote_Router(config-isakmp)# group 2
+Remote_Router(config-isakmp)# exit
+Remote_Router(config)# crypto isakmp key vpn_p@ssword address 203.0.113.2
+
+! --- 2. Set up the Phase 2 Transform Set ---
+Remote_Router(config)# crypto ipsec transform-set REMOTE-SET esp-aes esp-sha-hmac
+
+! --- 3. Define Traffic Rules & Peer Map ---
+Remote_Router(config)# access-list 100 permit ip 192.168.20.0 0.0.0.255 192.168.10.0 0.0.0.255
+
+Remote_Router(config)# crypto map REMOTE-MAP 10 ipsec-isakmp
+Remote_Router(config-crypto-map)# set peer 203.0.113.2
+Remote_Router(config-crypto-map)# set transform-set REMOTE-SET
+Remote_Router(config-crypto-map)# match address 100
+Remote_Router(config-crypto-map)# exit
+
+! --- 4. Bind Crypto to the Public Port & Add Routing Paths ---
+Remote_Router(config)# interface GigabitEthernet0/1
+Remote_Router(config-if)# crypto map REMOTE-MAP
+Remote_Router(config-if)# exit
+
+Remote_Router(config)# ip route 0.0.0.0 0.0.0.0 198.51.100.1
+Remote_Router(config)# ip route 203.0.113.2 255.255.255.255 198.51.100.1
+Remote_Router(config)# end
+
+Remote_Router# write memory
+```
+<img width="1301" height="1008" alt="image" src="https://github.com/user-attachments/assets/3d347bc4-a6c2-4795-b6c6-48a7998f4333" />
+
+---
+Now that the security engine is armed and listening on the public internet ports (GigabitEthernet0/1), the final phase is activating your local area networks (LANs) and waking up the tunnel.
+
+Let's follow these steps to finish the lab:
+
+### 🛠️ Step 1: Let's Turn on the LAN Interfaces
+I need to ensure the local gateway ports (GigabitEthernet0/0) are online so the PCs can reach the routers.
+
+On the HQ Router CLI:
+```
+HQ_Router# configure terminal
+HQ_Router(config)# interface GigabitEthernet0/0
+HQ_Router(config-if)# ip address 192.168.10.1 255.255.255.0
+HQ_Router(config-if)# no shutdown
+HQ_Router(config-if)# exit
+```
+<img width="731" height="173" alt="image" src="https://github.com/user-attachments/assets/21f4305d-f20a-4716-b0ce-ab1f62c0361c" />
+
+On the Remote Router CLI:
+```
+Remote_Router# configure terminal
+Remote_Router(config)# interface GigabitEthernet0/0
+Remote_Router(config-if)# ip address 192.168.20.1 255.255.255.0
+Remote_Router(config-if)# no shutdown
+Remote_Router(config-if)# exit
+```
+*(Let's ensure all the triangle link lights between the routers and local switches turn Green/Orange on the workspace).*
+### 🧪 Step 2: The Final End-to-End Tunnel Test
+Now, let's trigger the interesting traffic and force the routers to form the secure IPsec tunnel.
+1. Click on the Remote PC (192.168.20.10) on your workspace map.
+2. Open the Desktop tab -> Launch the Command Prompt.
+3. Type the cross-network ping targeting the HQ PC and press Enter:
+```
+ping 192.168.10.10
+```
+<img width="787" height="286" alt="image" src="https://github.com/user-attachments/assets/9cdcc1c9-6804-4373-9d45-cc9b8ff0e8e6" />
+
+*Note closely! The first 1 packet says "Request timed out" while the routers execute the math handshake we set up in Phase 2. The 2nd, 3rd and 4th packets all switch to successful replies!*
+
+Running the command do show crypto isakmp sa right after a successful cross-network ping displays a table containing a row below:
+<img width="1217" height="238" alt="image" src="https://github.com/user-attachments/assets/195b160b-5a25-4359-bab4-0ae72baae4b2" />
+```
+IPv4 Crypto ISAKMP SA
+dst             src             state          conn-id slot status
+203.0.113.2     198.51.100.2    QM_IDLE           1001    0 ACTIVE
+```
+
+### 🧠 What QM_IDLE Means:
+1. QM (Quick Mode): This indicates that Phase 1 (ISAKMP) successfully finished its negotiations and has handed off the connection to Phase 2 (IPsec) to safely encrypt your data payload.
+2. IDLE: This is actually a great thing! It means the secure handshake is finished and sitting in a stable, healthy state—ready and waiting to process any traffic moving through the tunnel.
