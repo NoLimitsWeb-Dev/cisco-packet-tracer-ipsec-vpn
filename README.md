@@ -400,6 +400,6 @@ The appearance of the **QM_IDLE** status and 100% successful cross-network packe
 This architecture serves as a verified, secure blueprint for data privacy and policy-based traffic isolation.
 
 ```
-### 📥 [Download the complete .pkt Packet Tracer Lab File Here](Cisco-Packet-Tracer-IPsec-VPN.pkt)
+### 📥 [Download the complete .pkt Packet Tracer Lab File Here](Cisco-packet-tracer-ipsec-vpn.pkt)
 
 ```
