@@ -332,3 +332,68 @@ dst             src             state          conn-id slot status
 ### 🧠 What QM_IDLE Means:
 1. QM (Quick Mode): This indicates that Phase 1 (ISAKMP) successfully finished its negotiations and has handed off the connection to Phase 2 (IPsec) to safely encrypt your data payload.
 2. IDLE: This is actually a great thing! It means the secure handshake is finished and sitting in a stable, healthy state—ready and waiting to process any traffic moving through the tunnel.
+
+## 🚨 Comprehensive Incident & Troubleshooting Log
+This log chronicles the core engineering blockers and Packet Tracer simulation anomalies resolved during deployment.
+
+### 🛑 Incident 1: Invalid Input Error on crypto isakmp policy
+* **Symptoms:** Execution of security configuration commands threw a % Invalid input detected at '^' marker error.
+* **Root Cause:** Cisco ISR 2911 devices initialize with a data-only baseline. Security feature modules are locked by default in virtual RAM.
+* **Resolution:** Activated the evaluation license suite and forced a system reload to rebuild the command parse tree:
+```
+Router(config)# license boot module c2900 technology-package securityk9
+Router(config)# exit
+Router# write memory
+Router# reload
+```
+### 🛑 Incident 2: Incomplete Volatile Memory Write on Reload
+* **Symptoms:** Re-entering the configuration room after a license reboot revealed a blank security association table, and public connections were severed.
+* **Root Cause:** Executing a system reboot to apply changes drops active configurations unless explicitly saved. Interface flags reverted to shutdown.
+* **Resolution:** Re-initialized basic IPs on the active interfaces, issued no shutdown triggers, and ensured state synchronization:
+```
+Router(config-if)# ip address 192.168.10.1 255.255.255.0
+Router(config-if)# no shutdown
+```
+
+### 🛑 Incident 3: Invalid Input Syntax on hash sha256 and esp-sha256-hmac
+* **Symptoms:** The CLI rejected cryptographic definitions attempting to use SHA-256 integrity algorithms.
+* **Root Cause:** Packet Tracer's internal IOS software simulator features an abstract subset of commands. It lacks compilation hooks for newer hashing blocks inside Phase 1 and Phase 2.
+* **Resolution:** Downgraded the hashing directives to the core SHA-1 engine via compatible arguments:
+  * Phase 1: hash sha
+  * Phase 2: crypto ipsec transform-set HQ-SET esp-aes esp-sha-hmac
+
+### 🛑 Incident 4: Misaligned Mapping to Local LAN Interface
+* **Symptoms:** All baseline configuration parameters passed verification checks, but cross-network pings failed with a 100% data loss rate and an empty show crypto isakmp sa database.
+* **Root Cause:** Physical mapping layout discrepancy. The crypto maps were inadvertently bound to interface GigabitEthernet0/0 (the internal LAN interface linked to the local switch). Consequently, the gateway ignored data traversing the external internet connection.
+* **Resolution:** Safely removed the crypto map bindings from internal channels and attached them directly to the WAN interfaces (GigabitEthernet0/1):
+```
+Router(config)# interface GigabitEthernet0/0
+Router(config-if)# no crypto map
+Router(config)# interface GigabitEthernet0/1
+Router(config-if)# crypto map HQ-MAP
+```
+
+### 🛑 Incident 5: Failed Local Remote Area PDU Verification
+* **Symptoms:** PDU tracking logs showed a Failed state for transmissions between the Remote workstation and its adjacent gateway router.
+* **Root Cause:** Swapping network interface components broke active spanning-tree nodes, and lingering invalid crypto maps remained bound to local tracking configurations.
+* **Resolution:** Executed a configuration wipe on the interface, re-verified matching IP addresses on the workstations, and clicked the Fast Forward Time (>>) tool in the simulator to jump past Spanning Tree Protocol (STP) convergence delays.
+
+### 🛑 Incident 6: Packet Tracer Cache/Memory Allocation Deadlock
+* **Symptoms:** Re-applying configurations failed to generate handshakes despite absolute data entry and path correctness. Running clear crypto sa threw parsing errors.
+* **Root Cause:** The Packet Tracer application environment retains cached routing states and translation table remnants when security modules are modified continuously.
+* **Resolution:** Committed the active configurations to permanent storage via write memory, saved the underlying .pkt environment file, restarted the simulator process to purge the memory leak, and re-initiated terminal traffic.
+---
+
+### 🧠 Lessons Learnt
+* **License Enforcement:** Cisco ISR routers require manual activation of the Security Technology Package (securityk9) license and a full system reboot before they will accept any crypto configuration syntax.
+* **Simulator Protocol Limits:** Cisco Packet Tracer runs a restricted IOS command library. Modern hashing algorithms like sha256 fail to compile inside the simulator; configurations must fall back to standard sha (SHA-1) to build the tunnel.
+* **Strict Parameter Symmetry:** An IPsec tunnel will fail to negotiate unless Phase 1 (ISAKMP) and Phase 2 (IPsec) rules match identically on both sides (AES-256, SHA-1, DH Group 2, and matching Pre-Shared Keys).
+* **Precise Port Alignment:** Crypto maps must be bound exclusively to the outward-facing public WAN ports (GigabitEthernet0/1). Accidentally binding them to internal LAN ports (GigabitEthernet0/0) breaks local gateway traffic.
+* Mirrored Access Lists: The traffic selectors (ACL 100) must be exact opposite mirrors of each other (HQ: Permit IP Subnet A to B; Remote: Permit IP Subnet B to A) or the routers will silently drop the return handshake.
+---
+
+### 🏁 Conclusion
+This project successfully demonstrated the configuration and verification of a secure **Site-to-Site IPsec VPN tunnel** using Cisco 2911 routers in a simulated environment. By overcoming deployment hurdles—including feature licensing, hardware port re-mapping, and simulator constraints—the network achieved flawless private communication over an untrusted public ISP cloud.
+
+
+The appearance of the **QM_IDLE** status and 100% successful cross-network packet replies confirm that the cryptographic engine is fully functional and stable. This architecture serves as a verified, secure blueprint for data privacy and policy-based traffic isolation.
