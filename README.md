@@ -27,6 +27,7 @@ Before typing commands, lets drag and drop the following devices onto the Packet
 * Rename (Router2) to Remote Router: Represents the remote office or teleworker node.
 
 2. Add the Switches
+
 Routers generally connect to switches, which then connect to your endpoints.
 * Go to the bottom-left device selection menu and click on Network Devices (the router icon), then select Switches from the sub-menu below it.
 * Select the 2960 Switch model.
@@ -39,15 +40,17 @@ Routers generally connect to switches, which then connect to your endpoints.
 * Drag another PC and place it next to Remote_Switch.
 
 4. Cable Everything Together
+
 Because you are connecting different types of devices (Router to Switch, and Switch to PC), you must use a Copper Straight-Through cable (the solid black line icon found under the Connections/Lightning bolt menu).
 * HQ LAN Connections:
   * Click the Copper Straight-Through cable.
   * Click your HQ PC, select FastEthernet0, then click HQ_Switch and select      any available port (FastEthernet0/1).
-  * Click the cable tool again. Click HQ_Switch (FastEthernet0/24), then click your HQ_Router and plug it into its LAN interface (GigabitEthernet0).
+  * Click the cable tool again. Click HQ_Switch (FastEthernet0/24), then click your HQ_Router and plug it into its LAN interface (GigabitEthernet0/0).
 <img width="1142" height="1007" alt="image" src="https://github.com/user-attachments/assets/81a0c905-5c3f-4fe8-b389-b70cecd361a7" />
 
 
 5. Assign IP Addresses to the PCs
+
 Let's give the computers their IP configurations so they can communicate through the routers.
 * On the HQ PC:
   * Click the PC -> Go to the Desktop tab -> Click IP Configuration.
@@ -78,24 +81,24 @@ HQ_Router(config-if)# ip address 192.168.10.1 255.255.255.0
 HQ_Router(config-if)# no shutdown
 HQ_Router(config-if)# exit
 ```
-<img width="1146" height="1022" alt="image" src="https://github.com/user-attachments/assets/e78152e3-d025-486d-be66-d855c5510667" />
+#1. <img width="1146" height="1022" alt="image" src="https://github.com/user-attachments/assets/e78152e3-d025-486d-be66-d855c5510667" />
 
 ### 2. Configure the Remote Router LAN Interface
 Click on your Remote Router, go to the CLI tab, and enter these commands:
 ```
 Remote_Router> enable
 Remote_Router# configure terminal
-Remote_Router(config)# interface GigabitEthernet0/1
+Remote_Router(config)# interface GigabitEthernet0/0
 Remote_Router(config-if)# ip address 192.168.20.1 255.255.255.0
 Remote_Router(config-if)# no shutdown
 Remote_Router(config-if)# exit
 ```
-<img width="1147" height="1001" alt="image" src="https://github.com/user-attachments/assets/0b944c64-41f7-48d4-937a-f0cab3550b04" />
+#2. <img width="1147" height="1001" alt="image" src="https://github.com/user-attachments/assets/0b944c64-41f7-48d4-937a-f0cab3550b04" />
 
 ---
 
 ### 🔍 Quick Check
-Once you type no shutdown, the link indicators (triangle arrows) between your routers and switches in Packet Tracer should turn from Red to Green/Orange.
+Once I type *no shutdown*, the link indicators (triangle arrows) between the routers and switches in Packet Tracer turn from Red to Green/Orange *(as shown above in pictures #1 and #2 for HQ Router and Remote Router respectively).*
 
 To verify everything is configured correctly before setting up the VPN tunnel:
 1. Open the HQ PC -> Go to the Desktop tab -> Open Command Prompt.
@@ -114,11 +117,13 @@ Because am connecting routers directly to other routers, I have two options in P
 * Option B (Traditional Serial Ports): Use a Serial DCE cable (the red lightning bolt with a clock icon). This requires adding a hardware expansion card (HWIC-2T) into each 2911 router first.
 
 To keep things straightforward and fast without shutting down my routers to insert hardware modules,I will use Option A (GigabitEthernet Cross-Over cables).
+
 ---
 
 ### Option A:
 
 **1. Cable the Routers Together**
+
 Go to the bottom-left menu, click the Connections icon (the lightning bolt), and select the Copper Cross-Over cable (dashed black line).
 * HQ to ISP Connection:
   * Click the HQ Router and select GigabitEthernet0/1.
@@ -134,15 +139,17 @@ Go to the bottom-left menu, click the Connections icon (the lightning bolt), and
 Right now, the connection links between the routers look Red because the interfaces are shut down by default. Let's turn them on and assign public IP addresses.
 
 **Configure the HQ Router WAN Interface**
+
 Click the HQ Router, open the CLI tab, and enter:
 ```
 HQ_Router> enable
 HQ_Router# configure terminal
-HQ_Router(config)# interface GigabitEthernet0/0
+HQ_Router(config)# interface GigabitEthernet0/1
 HQ_Router(config-if)# ip address 203.0.113.2 255.255.255.252
 HQ_Router(config-if)# no shutdown
 ```
 **Configure the ISP Router Interfaces**
+
 Click the center ISP Router, open its CLI tab, and configuration both public-facing interfaces:
 ```
 Router> enable
@@ -166,20 +173,31 @@ Remote_Router(config)# interface GigabitEthernet0/0
 Remote_Router(config-if)# ip address 198.51.100.2 255.255.255.252
 Remote_Router(config-if)# no shutdown
 ```
-<img width="1139" height="1004" alt="image" src="https://github.com/user-attachments/assets/dc78aeee-f234-4804-9183-6ed9695ebfb7" />
+**NOTES:**
+The hostname ISP_Router command changes the router's display name from the generic factory default (Router) to a unique identifier (ISP_Router).
+```
+Router(config)# hostname ISP_Router
+ISP_Router(config)# .....................
+```
+**Here is why it is used:**
+* **Prevents Human Error:** When configuring multiple routers simultaneously, it changes the CLI prompt to ISP_Router(config)# so you instantly know which machine you are configuring.
+* **Traceable Logs:** System alerts and error logs use this name so you can instantly pinpoint which physical device is having an issue.
+* **Enables Security:** Cisco IOS will block you from setting up secure remote access (like SSH) unless the device has a unique name instead of the default generic name.
 
 ### 🔍 Verification Check
-Once all interfaces are configured, all lines connecting the three routers should turn Green.
+Once all interfaces are configured, all lines connecting the three routers should turn Green (as shown below).
+<img width="1139" height="1004" alt="image" src="https://github.com/user-attachments/assets/dc78aeee-f234-4804-9183-6ed9695ebfb7" />
 
-Let's test connectivity over the "Internet" links before I add routing:
+Let's test connectivity over the "Internet" links before adding routing:
 1. Let's open the CLI on HQ Router and type ping 203.0.113.1 (The result below shows success rate of 100%).
 <img width="836" height="195" alt="image" src="https://github.com/user-attachments/assets/23556d36-c72f-46ab-93af-9f64143f9ae6" />
 
 2. Let's open the CLI on Remote Router and type ping 198.51.100.1 (The result below shows success rate of 80%).
 <img width="691" height="149" alt="image" src="https://github.com/user-attachments/assets/dc11aaa7-0cdf-433d-9c14-a5dea4059317" />
+
 ---
 
-### 🔑 Advanced Device Feature Unlocking (Licensing)
+## 🔑 Advanced Device Feature Unlocking (Licensing)
 * Goal: Activating the Cisco IOS Security Technology Package (securityk9).
 * Purpose: Unlocking the router's hardware-accelerated encryption engine so it can understand and execute complex cryptographic commands.
 
@@ -196,13 +214,27 @@ Router(config)# exit
 Router# write memory
 Router# reload
 ```
-*(Press Enter to confirm the reload. Let both routers reboot completely and return to green link status before moving on).*
+*Press Enter to confirm the reload. Let both routers reboot completely and return to green link status before moving on.*
 <img width="1132" height="983" alt="image" src="https://github.com/user-attachments/assets/292d3138-6973-4202-8f46-17a5c206e8f8" />
+
+**NOTE:**
+The command ***"license boot module c2900 technology-package securityk9"*** is a activation command used on Cisco ISR G2 routers (specifically the 2900 series, which includes your 2911).
+
+Its purpose is to activate the advanced security features on the router. 
+
+Here is the brief breakdown of what each word tells the router:
+* **license boot:** Tells the router to prepare a specific software license package to be loaded into memory on its next reboot/boot-up sequence.
+* **module c2900:** Specifies the hardware architecture platform (the Cisco 2900 chassis family) that the software module runs on.
+* **technology-package:** In Cisco IOS v15, features are bundled into technology modules (like Data, Voice, or Security) rather than entirely separate operating system files. This parameter states you are modifying a major package block.
+* **securityk9:** Specifies the exact Security feature set. This unlocks the cryptographic algorithms required to run the IOS firewall, intrusion prevention systems, and IPsec VPN tunnels.
+
+### 💡 Summary
+In Packet Tracer, running this command activates a free, built-in 60-day evaluation license. It converts a generic data router into an advanced security appliance that is capable of building encrypted tunnels.
 
 ---
 ## VPN's Configuration
 ### 🏢 Phase 1: Clean HQ Router VPN Configuration
-Once the HQ Router reboots, open its CLI and paste this streamlined script to configure your VPN tunnel over your internet port (GigabitEthernet0/1):
+Once the HQ Router reboots, open its CLI and paste this streamlined script to configure VPN tunnel over the internet port (GigabitEthernet0/1):
 ```
 HQ_Router> enable
 HQ_Router# configure terminal
@@ -221,7 +253,6 @@ HQ_Router(config)# crypto ipsec transform-set HQ-SET esp-aes esp-sha-hmac
 
 ! --- 3. Define Traffic Rules & Peer Map ---
 HQ_Router(config)# access-list 100 permit ip 192.168.10.0 0.0.0.255 192.168.20.0 0.0.0.255
-
 HQ_Router(config)# crypto map HQ-MAP 10 ipsec-isakmp
 HQ_Router(config-crypto-map)# set peer 198.51.100.2
 HQ_Router(config-crypto-map)# set transform-set HQ-SET
@@ -242,7 +273,7 @@ HQ_Router# write memory
 <img width="1136" height="1005" alt="image" src="https://github.com/user-attachments/assets/2c4ceb3a-9635-4062-aa07-e6c996083ed4" />
 
 ---
-### 🕸️ Phase 3: Clean Remote Router VPN Configuration
+### 🕸️ Phase 2: Clean Remote Router VPN Configuration
 Open Remote Router CLI after its reboot and paste this mirrored configuration block:
 ```
 Remote_Router> enable
@@ -321,7 +352,7 @@ ping 192.168.10.10
 
 *Note closely! The first 1 packet says "Request timed out" while the routers execute the math handshake we set up in Phase 2. The 2nd, 3rd and 4th packets all switch to successful replies!*
 
-Running the command do show crypto isakmp sa right after a successful cross-network ping displays a table containing a row below:
+Running the command *do show crypto isakmp sa* right after a successful cross-network ping displays a table containing a row below:
 <img width="1217" height="238" alt="image" src="https://github.com/user-attachments/assets/195b160b-5a25-4359-bab4-0ae72baae4b2" />
 ```
 IPv4 Crypto ISAKMP SA
@@ -333,6 +364,7 @@ dst             src             state          conn-id slot status
 1. QM (Quick Mode): This indicates that Phase 1 (ISAKMP) successfully finished its negotiations and has handed off the connection to Phase 2 (IPsec) to safely encrypt your data payload.
 2. IDLE: This is actually a great thing! It means the secure handshake is finished and sitting in a stable, healthy state—ready and waiting to process any traffic moving through the tunnel.
 
+---
 ## 🚨 Comprehensive Incident & Troubleshooting Log
 This log chronicles the core engineering blockers and Packet Tracer simulation anomalies resolved during deployment.
 
@@ -382,17 +414,17 @@ Router(config-if)# crypto map HQ-MAP
 * **Symptoms:** Re-applying configurations failed to generate handshakes despite absolute data entry and path correctness. Running clear crypto sa threw parsing errors.
 * **Root Cause:** The Packet Tracer application environment retains cached routing states and translation table remnants when security modules are modified continuously.
 * **Resolution:** Committed the active configurations to permanent storage via write memory, saved the underlying .pkt environment file, restarted the simulator process to purge the memory leak, and re-initiated terminal traffic.
----
 
-### 🧠 Lessons Learnt
+---
+## 🧠 Lessons Learnt
 * **License Enforcement:** Cisco ISR routers require manual activation of the Security Technology Package (securityk9) license and a full system reboot before they will accept any crypto configuration syntax.
 * **Simulator Protocol Limits:** Cisco Packet Tracer runs a restricted IOS command library. Modern hashing algorithms like sha256 fail to compile inside the simulator; configurations must fall back to standard sha (SHA-1) to build the tunnel.
 * **Strict Parameter Symmetry:** An IPsec tunnel will fail to negotiate unless Phase 1 (ISAKMP) and Phase 2 (IPsec) rules match identically on both sides (AES-256, SHA-1, DH Group 2, and matching Pre-Shared Keys).
 * **Precise Port Alignment:** Crypto maps must be bound exclusively to the outward-facing public WAN ports (GigabitEthernet0/1). Accidentally binding them to internal LAN ports (GigabitEthernet0/0) breaks local gateway traffic.
 * Mirrored Access Lists: The traffic selectors (ACL 100) must be exact opposite mirrors of each other (HQ: Permit IP Subnet A to B; Remote: Permit IP Subnet B to A) or the routers will silently drop the return handshake.
----
 
-### 🏁 Conclusion
+---
+## 🏁 Conclusion
 This project successfully demonstrated the configuration and verification of a secure **Site-to-Site IPsec VPN tunnel** using Cisco 2911 routers in a simulated environment. By overcoming deployment hurdles—including feature licensing, hardware port re-mapping, and simulator constraints—the network achieved flawless private communication over an untrusted public ISP cloud.
 
 
